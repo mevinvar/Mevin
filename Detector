@@ -1,0 +1,63 @@
+
+pragma solidity ^0.8.0;
+
+contract ThreatDetectionSystem {
+    address private owner;
+    uint256 public highValueThreshold;
+    uint256 public minTransactionInterval = 30; 
+    uint256 public threatCount;
+    mapping(uint256 => Threat) public threats;
+    
+    struct Threat {
+        uint256 id;
+        string description;
+    }
+
+    
+    event HighValueTransaction(address indexed sender, uint value, string warning);
+    event ThreatDetected(uint256 indexed threatId, string description);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "You are not the owner");
+        _;
+    }
+
+   
+    constructor(uint256 _threshold) {
+        owner = msg.sender;
+        highValueThreshold = _threshold;
+    }
+
+   
+    function receiveTransaction() external payable {
+        require(block.timestamp > lastTransactionTime[msg.sender] + minTransactionInterval, "Wait before transacting again");
+        if (msg.value > highValueThreshold) {
+            emit HighValueTransaction(msg.sender, msg.value, "High value transaction detected");
+        }
+        lastTransactionTime[msg.sender] = block.timestamp;
+    }
+
+  
+    function updateThreshold(uint256 _newThreshold) public onlyOwner {
+        highValueThreshold = _newThreshold;
+    }
+
+    function setMinTransactionInterval(uint256 _interval) public onlyOwner {
+        minTransactionInterval = _interval;
+    }
+
+    
+    function detectThreat(string memory _description) public onlyOwner {
+        threatCount++;
+        threats[threatCount] = Threat(threatCount, _description);
+        emit ThreatDetected(threatCount, _description);
+    }
+
+   
+    function getThreat(uint256 _id) public view returns (Threat memory) {
+        return threats[_id];
+    }
+
+    
+    mapping(address => uint) public lastTransactionTime;
+}
